@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "knowledgemap"
+version = "0.1.0"
+description = "Local-first evidence-backed knowledge service"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.28,<1",
+  "mcp>=2,<3",
+  "pydantic>=2,<3",
+  "pydantic-settings>=2,<3",
+  "trafilatura>=2,<3",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8,<10",
+  "pytest-asyncio>=0.25,<2",
+  "respx>=0.22,<1",
+]
+
+[project.scripts]
+knowledgemap = "knowledgemap.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowledgemap"]
