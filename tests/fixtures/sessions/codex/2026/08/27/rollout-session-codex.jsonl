@@ -1,0 +1,4 @@
+{"timestamp":"2026-08-27T09:00:00Z","type":"session_meta","payload":{"id":"session-codex","session_id":"session-codex","cwd":"/workspace/project-b","timestamp":"2026-08-27T09:00:00Z"}}
+{"timestamp":"2026-08-27T09:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Find versioned documentation."}]}}
+{"timestamp":"2026-08-27T09:00:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Use the release documentation."}]}}
+{"timestamp":"2026-08-27T09:00:03Z","type":"event_msg","payload":{"type":"agent_reasoning","message":"hidden reasoning"}}
