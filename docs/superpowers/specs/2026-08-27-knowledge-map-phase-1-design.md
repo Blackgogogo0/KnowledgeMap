@@ -1,7 +1,7 @@
 # KnowledgeMap Phase 1 Design
 
 Date: 2026-08-27
-Status: Draft for final user review
+Status: Approved for implementation planning
 
 ## 1. Purpose
 
@@ -257,46 +257,51 @@ Dependencies, build artifacts, binaries, generated files, secret files, and over
 
 ### `session_list`
 
-Inputs: client, project filter, time range.  
+Inputs: client, project filter, time range.
 Outputs: session metadata safe to show before body authorization.
 
 ### `session_analyze`
 
-Inputs: client, session ID, explicit authorization.  
+Inputs: client, session ID, explicit authorization.
 Outputs: goal, knowledge questions, recommendations, and analysis provenance.
+
+### `session_revoke`
+
+Inputs: client and session ID.
+Outputs: the revoked grant and revocation timestamp. Future body reads and analyses for that session are rejected until the user creates a new explicit grant.
 
 ### `source_import`
 
-Inputs: file or URL, source type, and GitHub import options when applicable.  
+Inputs: file or URL, source type, and GitHub import options when applicable.
 Outputs: source record, evidence snapshot, and pending claims.
 
 GitHub options include `github_mode`, `tracked_ref`, `include_paths`, and `exclude_paths`.
 
 ### `source_update`
 
-Inputs: source ID or all due sources.  
+Inputs: source ID or all due sources.
 Outputs: old and new versions, changed files or sections, affected claims, and proposed transitions.
 
 ### `review_list`
 
-Inputs: item type and status filters.  
+Inputs: item type and status filters.
 Outputs: pending claims and transitions with evidence.
 
 ### `review_decide`
 
-Inputs: claim ID or transition ID, decision, and optional note.  
+Inputs: claim ID or transition ID, decision, and optional note.
 Outputs: audited state change.
 
 Valid review actions are `accept`, `reject`, `downgrade-to-disputed`, and `research-more`. Superseding a claim is represented as acceptance of a replacement plus an explicit supersession relationship.
 
 ### `knowledge_search`
 
-Inputs: query, scope, source types, statuses, and `top_k`.  
+Inputs: query, scope, source types, statuses, and `top_k`.
 Outputs: ranked claims with claim and evidence IDs. Only accepted claims are included by default.
 
 ### `knowledge_trace`
 
-Input: claim ID.  
+Input: claim ID.
 Output: source identity, evidence version, original excerpt, locator, local pointer, and stable external pointer when available.
 
 ### `knowledge_status`
