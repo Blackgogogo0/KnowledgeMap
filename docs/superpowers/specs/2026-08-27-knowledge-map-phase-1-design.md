@@ -13,7 +13,7 @@ Phase 1 is intentionally narrow. It does not provide real-time web search, socia
 
 - Read user-selected Claude Code and Codex sessions from their local history stores.
 - Derive goals, knowledge questions, and source recommendations from authorized sessions.
-- Import user-specified papers, PDFs, web documentation, technical blogs, and GitHub content.
+- Import user-specified papers when available as HTML, Markdown, plain text, or other supported structured text, plus web documentation, technical blogs, and GitHub content.
 - Preserve immutable source snapshots and precise evidence pointers.
 - Let AI propose claims while reserving publication decisions for the user.
 - Provide fast local retrieval through SQLite FTS5/BM25.
@@ -30,6 +30,7 @@ Phase 1 is intentionally narrow. It does not provide real-time web search, socia
 - Full knowledge graphs, GraphRAG, or code knowledge graphs.
 - Team collaboration, multi-tenancy, SSO, or source-system ACL synchronization.
 - A complex web or mobile interface.
+- PDF ingestion, page rendering, OCR, chart interpretation, or other visual-document understanding.
 
 ## 4. Architecture
 
@@ -96,7 +97,7 @@ Embedding search is an optional later retrieval channel. The data model and MCP 
 Represents a continuing source identity.
 
 - `source_id`
-- `type`: `paper`, `pdf`, `web_documentation`, `technical_blog`, `github`
+- `type`: `paper`, `web_documentation`, `technical_blog`, `github`
 - `canonical_uri`
 - `author`
 - `publisher`
@@ -320,7 +321,7 @@ Phase 1 is accepted when:
 
 - One explicitly authorized Claude Code session and one Codex session can be listed and analyzed.
 - Session analysis produces recommendations but cannot create accepted claims.
-- PDF, web page, and GitHub Markdown imports work end to end.
+- HTML/Markdown paper, web page, and GitHub Markdown imports work end to end.
 - Every accepted claim traces to readable original evidence.
 - GitHub citations contain commit SHA, file path, and locator.
 - Source updates preserve old versions and create reviewable diffs.
@@ -357,3 +358,4 @@ Testing includes:
 - Team authorization and remote synchronization.
 - GraphRAG and code knowledge graphs.
 - Rich review and knowledge-browsing UI.
+- PDF and visually structured document ingestion using rendering, OCR, and vision models.
