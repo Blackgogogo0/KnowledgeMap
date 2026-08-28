@@ -1,0 +1,36 @@
+{
+  "claims": [
+    {"name":"native-pkce","text":"OAuth native applications use PKCE authorization code flow","status":"accepted"},
+    {"name":"semver","text":"Stable releases follow semantic versioning rules","status":"accepted"},
+    {"name":"metabolism","text":"Memory metabolism applies controlled forgetting operations","status":"accepted"},
+    {"name":"graph-rag","text":"Graph RAG combines entity relations with retrieval","status":"accepted"},
+    {"name":"mcp","text":"MCP protocol exposes knowledge tools to agents","status":"accepted"},
+    {"name":"pointer","text":"Evidence pointer preserves a stable source locator","status":"accepted"},
+    {"name":"session","text":"Session authorization requires explicit user confirmation","status":"accepted"},
+    {"name":"weekly","text":"Weekly update checks tracked authoritative sources","status":"accepted"},
+    {"name":"commit","text":"GitHub evidence links are pinned to a commit","status":"accepted"},
+    {"name":"bm25","text":"BM25 full text ranking supports fast local retrieval","status":"accepted"},
+    {"name":"review","text":"Human review accepts or rejects candidate claims","status":"accepted"},
+    {"name":"snapshot","text":"Immutable snapshots retain original document bytes","status":"accepted"},
+    {"name":"audit","text":"Audit events record every knowledge state transition","status":"accepted"},
+    {"name":"conflict","text":"Conflicting claims remain disputed until reviewed","status":"accepted"},
+    {"name":"scope","text":"Claim scope states where technical guidance applies","status":"accepted"},
+    {"name":"source","text":"Authority tiers distinguish standards from commentary","status":"accepted"},
+    {"name":"local","text":"Local first storage keeps evidence under user control","status":"accepted"},
+    {"name":"citation","text":"Cited answers include claim and evidence identifiers","status":"accepted"},
+    {"name":"legacy-oauth","text":"Legacy OAuth implicit flow is universally preferred","status":"disputed"},
+    {"name":"unsafe-update","text":"Repository updates may overwrite accepted evidence","status":"disputed"}
+  ],
+  "queries": [
+    {"query":"PKCE", "expected":["native-pkce"]},
+    {"query":"\"semantic versioning\"", "expected":["semver"]},
+    {"query":"memory metabolism", "expected":["metabolism"]},
+    {"query":"Graph RAG", "expected":["graph-rag"]},
+    {"query":"MCP protocol", "expected":["mcp"]},
+    {"query":"evidence pointer", "expected":["pointer"]},
+    {"query":"session authorization", "expected":["session"]},
+    {"query":"weekly update", "expected":["weekly"]},
+    {"query":"GitHub commit", "expected":["commit"]},
+    {"query":"BM25 retrieval", "expected":["bm25"]}
+  ]
+}

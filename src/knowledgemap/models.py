@@ -24,6 +24,10 @@ class SearchQuery(BaseModel):
     query: str = Field(min_length=1)
     top_k: int = Field(default=5, ge=1, le=100)
     statuses: list[ClaimStatus] = Field(default_factory=lambda: [ClaimStatus.ACCEPTED])
+    source_types: list[str] = Field(default_factory=list)
+    created_after: datetime | None = None
+    created_before: datetime | None = None
+    scope: str | None = None
 
 
 class SourceRecord(BaseModel):
