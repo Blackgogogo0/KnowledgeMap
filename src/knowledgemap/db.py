@@ -31,8 +31,17 @@ class Database:
             connection.close()
 
     def migrate(self) -> None:
-        migration = (
-            files("knowledgemap.migrations").joinpath("001.sql").read_text(encoding="utf-8")
-        )
         with self.connect() as connection:
-            connection.executescript(migration)
+            migrations = files("knowledgemap.migrations")
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            if version < 1:
+                connection.executescript(
+                    migrations.joinpath("001.sql").read_text(encoding="utf-8")
+                )
+                version = 1
+            if version < 2:
+                connection.executescript(
+                    migrations.joinpath("002_session_intelligence.sql").read_text(
+                        encoding="utf-8"
+                    )
+                )

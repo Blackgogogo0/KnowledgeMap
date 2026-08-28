@@ -24,7 +24,30 @@ def test_migrate_is_idempotent(tmp_path):
 
     with db.connect() as connection:
         version = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert version == 1
+    assert version == 2
+
+
+def test_migrate_adds_session_intelligence_without_losing_v1_rows(tmp_path):
+    db = Database(tmp_path / "knowledge.db")
+    db.migrate()
+    with db.connect() as connection:
+        names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+
+    assert {
+        "session_checkpoints",
+        "task_episodes",
+        "task_state_events",
+        "gap_routes",
+        "knowledge_needs",
+        "knowledge_need_evidence",
+        "knowledge_need_claims",
+        "knowledge_need_feedback",
+    } <= names
 
 
 def test_connect_enables_foreign_keys_and_wal(tmp_path):
