@@ -131,7 +131,7 @@ def create_server(app) -> MCPServer:
 
 
 class KnowledgeMapApplication:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, analyzer=None):
         self.settings = settings
         self.db = Database(settings.database_path)
         self.db.migrate()
@@ -144,7 +144,7 @@ class KnowledgeMapApplication:
                 "codex": CodexSessionReader(settings.codex_session_root),
             },
         )
-        analyzer = OpenAICompatibleAnalyzer(
+        analyzer = analyzer or OpenAICompatibleAnalyzer(
             settings.analyzer_base_url,
             settings.analyzer_model,
             settings.analyzer_api_key,
