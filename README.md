@@ -59,6 +59,7 @@ breaks auditability.
 
 Client setup:
 
+- [中文使用手册](docs/user-guide.zh-CN.md)
 - [Claude Code](docs/claude-code.md)
 - [Codex](docs/codex.md)
 
