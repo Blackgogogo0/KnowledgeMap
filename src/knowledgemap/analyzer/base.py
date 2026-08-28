@@ -3,6 +3,13 @@ from typing import Protocol
 from pydantic import BaseModel, Field
 
 from knowledgemap.sessions.base import SessionMessage
+from knowledgemap.session_intelligence.models import (
+    AnalysisEvent,
+    GapRouteDecision,
+    KnowledgeNeedDraft,
+    TaskStateDelta,
+    TaskStateSnapshot,
+)
 
 
 class KnowledgeRecommendationDraft(BaseModel):
@@ -34,7 +41,30 @@ class _ClaimDraftList(BaseModel):
     claims: list[ClaimDraft]
 
 
+class StateExtractionDraft(BaseModel):
+    deltas: list[TaskStateDelta] = Field(default_factory=list)
+    unresolved_item_ids: list[str] = Field(default_factory=list)
+
+
+class RouteAnalysisDraft(BaseModel):
+    routes: list[GapRouteDecision] = Field(default_factory=list)
+
+
+class NeedAnalysisDraft(BaseModel):
+    knowledge_needs: list[KnowledgeNeedDraft] = Field(default_factory=list, max_length=5)
+
+
 class Analyzer(Protocol):
+    async def extract_state(
+        self, events: list[AnalysisEvent], previous_state: TaskStateSnapshot | None
+    ) -> StateExtractionDraft: ...
+
+    async def route_gaps(self, state: TaskStateSnapshot) -> RouteAnalysisDraft: ...
+
+    async def compose_needs(
+        self, state: TaskStateSnapshot, routes: list[GapRouteDecision]
+    ) -> NeedAnalysisDraft: ...
+
     async def analyze_session(
         self, messages: list[SessionMessage]
     ) -> SessionAnalysisDraft: ...

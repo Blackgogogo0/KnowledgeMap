@@ -7,17 +7,26 @@ from pydantic import BaseModel, ValidationError
 from knowledgemap.analyzer.base import (
     ClaimDraft,
     ExtractableDocument,
+    NeedAnalysisDraft,
+    RouteAnalysisDraft,
     SessionAnalysisDraft,
+    StateExtractionDraft,
     _ClaimDraftList,
 )
 from knowledgemap.errors import KnowledgeMapError
 from knowledgemap.sessions.base import SessionMessage
+from knowledgemap.session_intelligence.models import (
+    AnalysisEvent,
+    GapRouteDecision,
+    TaskStateSnapshot,
+)
 
 
 OutputModel = TypeVar("OutputModel", bound=BaseModel)
 
 
 class OpenAICompatibleAnalyzer:
+    provider_mode = "local_ollama"
     def __init__(
         self,
         base_url: str,
@@ -34,6 +43,40 @@ class OpenAICompatibleAnalyzer:
         self.api_key = api_key or "local"
         self.timeout = httpx.Timeout(timeout, connect=min(timeout, 10.0))
         self.max_attempts = max(1, max_attempts)
+
+    async def extract_state(
+        self, events: list[AnalysisEvent], previous_state: TaskStateSnapshot | None
+    ) -> StateExtractionDraft:
+        prompt = (
+            "Task state extraction. Return only evidence-backed state deltas and "
+            "unresolved item IDs. Put inferences under assumptions, never known facts.\n"
+            f"Previous state: {previous_state.model_dump_json() if previous_state else 'null'}\n"
+            "Incremental events:\n"
+            + "\n".join(event.model_dump_json() for event in events)
+        )
+        return await self._request(prompt, StateExtractionDraft)
+
+    async def route_gaps(self, state: TaskStateSnapshot) -> RouteAnalysisDraft:
+        prompt = (
+            "Route each unresolved item exactly once to ask_user, search_knowledge_map, "
+            "check_freshness, inspect_local, execute_or_test, or ignore. A failure alone "
+            "is not a knowledge gap. Return evidence-backed routes.\nTask state:\n"
+            + state.model_dump_json()
+        )
+        return await self._request(prompt, RouteAnalysisDraft)
+
+    async def compose_needs(
+        self, state: TaskStateSnapshot, routes: list[GapRouteDecision]
+    ) -> NeedAnalysisDraft:
+        prompt = (
+            "Compose at most five independently searchable Knowledge Needs only for "
+            "search_knowledge_map or check_freshness routes. Each need must state the "
+            "decision it changes and why current evidence is insufficient.\nState:\n"
+            + state.model_dump_json()
+            + "\nRoutes:\n"
+            + "\n".join(route.model_dump_json() for route in routes)
+        )
+        return await self._request(prompt, NeedAnalysisDraft)
 
     async def analyze_session(
         self, messages: list[SessionMessage]
