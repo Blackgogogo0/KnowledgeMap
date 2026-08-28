@@ -19,6 +19,11 @@ class FakeApplication:
         return [{"claim_id": "c1", "review_status": "accepted"}]
     def knowledge_trace(self, **kwargs): return {"claim_id": kwargs["claim_id"]}
     def knowledge_status(self): return {"accepted_claims": 1}
+    async def session_analysis_prepare(self, **kwargs): return {"checkpoint_id": "c1"}
+    async def session_analysis_submit(self, **kwargs): return {"checkpoint_id": "c1"}
+    def session_analysis_get(self, **kwargs): return {"checkpoint_id": "c1"}
+    def knowledge_need_list(self, **kwargs): return []
+    def knowledge_need_resolve(self, **kwargs): return {"status": "open", "hits": []}
 
 
 @pytest.mark.asyncio
@@ -31,6 +36,8 @@ async def test_server_exposes_exact_phase_one_tools():
         "session_list", "session_analyze", "session_revoke", "source_import",
         "source_update", "review_list", "review_decide", "knowledge_search",
         "knowledge_trace", "knowledge_status",
+        "session_analysis_prepare", "session_analysis_submit", "session_analysis_get",
+        "knowledge_need_list", "knowledge_need_resolve",
     }
 
 

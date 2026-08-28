@@ -21,6 +21,9 @@ from knowledgemap.search import SearchService
 from knowledgemap.sessions.claude import ClaudeSessionReader
 from knowledgemap.sessions.codex import CodexSessionReader
 from knowledgemap.sessions.service import SessionService
+from knowledgemap.session_intelligence.models import SessionInsightSubmission
+from knowledgemap.session_intelligence.repository import SessionIntelligenceRepository
+from knowledgemap.session_intelligence.service import SessionIntelligenceService
 from knowledgemap.sources.local import LocalSourceAdapter
 from knowledgemap.sources.web import WebSourceAdapter
 from knowledgemap.update import UpdateService
@@ -79,6 +82,49 @@ def create_server(app) -> MCPServer:
     @server.tool(name="session_revoke", structured_output=True)
     async def session_revoke(client: str, session_id: str) -> dict[str, Any]:
         return await _call(app.session_revoke, client=client, session_id=session_id)
+
+    @server.tool(name="session_analysis_prepare", structured_output=True)
+    async def session_analysis_prepare(
+        client: str, session_id: str, confirm_read: bool
+    ) -> dict[str, Any]:
+        return await _call(
+            app.session_analysis_prepare,
+            client=client,
+            session_id=session_id,
+            confirm_read=confirm_read,
+        )
+
+    @server.tool(name="session_analysis_submit", structured_output=True)
+    async def session_analysis_submit(
+        submission: SessionInsightSubmission,
+    ) -> dict[str, Any]:
+        return await _call(app.session_analysis_submit, submission=submission)
+
+    @server.tool(name="session_analysis_get", structured_output=True)
+    async def session_analysis_get(client: str, session_id: str) -> dict[str, Any]:
+        return await _call(app.session_analysis_get, client=client, session_id=session_id)
+
+    @server.tool(name="knowledge_need_list", structured_output=True)
+    async def knowledge_need_list(
+        status: str | None = None,
+        session_id: str | None = None,
+        top_k: int = 50,
+    ) -> dict[str, Any]:
+        response = await _call(
+            app.knowledge_need_list,
+            status=status,
+            session_id=session_id,
+            top_k=top_k,
+        )
+        if response["ok"]:
+            return {"ok": True, "items": response.pop("result")}
+        return response
+
+    @server.tool(name="knowledge_need_resolve", structured_output=True)
+    async def knowledge_need_resolve(knowledge_need_id: str) -> dict[str, Any]:
+        return await _call(
+            app.knowledge_need_resolve, knowledge_need_id=knowledge_need_id
+        )
 
     @server.tool(name="source_import", structured_output=True)
     async def source_import(uri: str, source_type: str) -> dict[str, Any]:
@@ -165,6 +211,12 @@ class KnowledgeMapApplication:
         )
         self.review = ReviewService(self.db, audit)
         self.search = SearchService(self.db, store)
+        self.session_intelligence = SessionIntelligenceService(
+            SessionIntelligenceRepository(self.db),
+            self.sessions,
+            analyzer,
+            self.search,
+        )
         self.updates = UpdateService(
             self.db, {}, interval_days=settings.update_interval_days
         )
@@ -177,6 +229,21 @@ class KnowledgeMapApplication:
 
     def session_revoke(self, client: str, session_id: str):
         return self.sessions.revoke(client, session_id, datetime.now(UTC))
+
+    async def session_analysis_prepare(self, **kwargs):
+        return await self.session_intelligence.prepare_local(**kwargs)
+
+    async def session_analysis_submit(self, submission: SessionInsightSubmission):
+        return await self.session_intelligence.submit(submission)
+
+    def session_analysis_get(self, **kwargs):
+        return self.session_intelligence.get_analysis(**kwargs)
+
+    def knowledge_need_list(self, **kwargs):
+        return self.session_intelligence.list_needs(**kwargs)
+
+    def knowledge_need_resolve(self, knowledge_need_id: str):
+        return self.session_intelligence.resolve_need(knowledge_need_id)
 
     async def source_import(self, uri: str, source_type: str):
         return await self.ingest.import_source(
@@ -222,6 +289,16 @@ class KnowledgeMapApplication:
                     WHERE status IN ('failed', 'source_unavailable')
                     """
                 ).fetchone()[0],
+                "open_knowledge_needs": connection.execute(
+                    "SELECT COUNT(*) FROM knowledge_needs WHERE status = 'open'"
+                ).fetchone()[0],
+                "needs_refresh": connection.execute(
+                    "SELECT COUNT(*) FROM knowledge_needs WHERE status = 'needs_refresh'"
+                ).fetchone()[0],
+                "latest_checkpoint_at": connection.execute(
+                    "SELECT MAX(created_at) FROM session_checkpoints"
+                ).fetchone()[0],
+                "analyzer_mode": "local_ollama",
             }
 
 
