@@ -19,6 +19,7 @@ class SessionAnalysisDraft(BaseModel):
 
 class ExtractableDocument(BaseModel):
     evidence_id: str
+    content_hash: str
     text: str = Field(min_length=1)
     media_type: str
 

@@ -38,6 +38,22 @@ class SourceRepository:
             )
         return record
 
+    def get_or_create(
+        self, source_type: str, canonical_uri: str, created_at: datetime
+    ) -> tuple[SourceRecord, bool]:
+        with self.db.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM sources WHERE canonical_uri = ?", (canonical_uri,)
+            ).fetchone()
+        if row is not None:
+            return SourceRecord(
+                source_id=row["source_id"],
+                type=row["type"],
+                canonical_uri=row["canonical_uri"],
+                created_at=datetime.fromisoformat(row["created_at"]),
+            ), False
+        return self.create(source_type, canonical_uri, created_at), True
+
 
 class EvidenceRepository:
     def __init__(self, db: Database):
@@ -83,6 +99,28 @@ class EvidenceRepository:
                 ),
             )
         return record
+
+    def find(self, source_id: str, version: str, content_hash: str) -> EvidenceRecord | None:
+        with self.db.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM evidence
+                WHERE source_id = ? AND version = ? AND content_hash = ?
+                """,
+                (source_id, version, content_hash),
+            ).fetchone()
+        if row is None:
+            return None
+        return EvidenceRecord(
+            evidence_id=row["evidence_id"],
+            source_id=row["source_id"],
+            version=row["version"],
+            content_hash=row["content_hash"],
+            retrieved_at=datetime.fromisoformat(row["retrieved_at"]),
+            local_blob_path=row["local_blob_path"],
+            media_type=row["media_type"],
+            locator=json.loads(row["locator_json"]),
+        )
 
 
 class ClaimRepository:
