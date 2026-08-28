@@ -1,7 +1,8 @@
 # KnowledgeMap
 
 KnowledgeMap is a local-first, evidence-backed knowledge service for Claude Code
-and Codex. Phase 1 analyzes explicitly authorized sessions, imports user-selected
+and Codex. It turns authorized or client-filtered session state into explicit,
+decision-relevant Knowledge Needs, imports user-selected
 text sources, puts AI-extracted claims behind human review, retrieves accepted
 claims with SQLite FTS5/BM25, and returns verifiable evidence traces.
 
@@ -18,8 +19,10 @@ claims with SQLite FTS5/BM25, and returns verifiable evidence traces.
 
 ## Install and initialize
 
-Requires Python 3.12+, `uv`, and an OpenAI-compatible analyzer. The default is
-local Ollama at `http://127.0.0.1:11434/v1` with `qwen3.5:0.8b`.
+Requires Python 3.12+, `uv`, and local Ollama for server-side session analysis.
+The default is `http://127.0.0.1:11434/v1` with `qwen3.5:0.8b`. Remote analyzer
+hosts are rejected; Codex and Claude Code can instead submit locally structured
+analysis through MCP without exposing themselves as APIs.
 
 ```bash
 uv sync
@@ -38,9 +41,22 @@ export KNOWLEDGEMAP_LOCAL_SOURCE_ROOT="/path/to/approved/documents"
 export KNOWLEDGEMAP_GITHUB_TOKEN="..."
 ```
 
-If `KNOWLEDGEMAP_ANALYZER_BASE_URL` points to a remote endpoint, authorized
-session bodies and extracted source text leave the machine for analysis. With a
-local Ollama endpoint they remain local.
+`KNOWLEDGEMAP_ANALYZER_BASE_URL` must use `localhost`, `127.0.0.1`, or `::1`.
+
+## Session intelligence
+
+Two modes share one schema:
+
+- Client-assisted: Codex or Claude Code filters its current context and calls
+  `session_analysis_submit`; KnowledgeMap stores task-state deltas and bounded
+  evidence excerpts, not the full transcript.
+- Local Ollama: after explicit session authorization, call
+  `session_analysis_prepare`; KnowledgeMap processes only events after the last
+  checkpoint.
+
+Use `knowledge_need_list` to inspect open needs and
+`knowledge_need_resolve` to search accepted claims. A resolved result includes
+claim IDs that can be passed to `knowledge_trace` for source evidence.
 
 ## Run
 

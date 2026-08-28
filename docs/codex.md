@@ -20,7 +20,7 @@ codex mcp add KnowledgeMap -- \
   uv run --directory /Users/example/KnowledgeMap knowledgemap serve
 ```
 
-Use `/mcp` in Codex to confirm that all ten KnowledgeMap tools are available.
+Use `/mcp` in Codex to confirm that the KnowledgeMap tools are available.
 
 Add this to the relevant `AGENTS.md`:
 
@@ -28,6 +28,15 @@ Add this to the relevant `AGENTS.md`:
 > `knowledge_trace` and cite its stable evidence locator and content hash. Label
 > disputed or stale material. If trace verification fails, say `unverified`.
 
-Session bodies are accessed only after `session_analyze` receives
-`confirm_read=true`. If the configured analyzer endpoint is remote, that
-authorized content is sent to the remote analyzer.
+For the current task, prefer client-assisted analysis:
+
+> Analyze this Codex task locally. Remove confirmations, repeated attempts and
+> raw tool output; preserve goals, constraints, decisions, assumptions,
+> unresolved items and evidence pointers. Route every unresolved item to one of
+> `ask_user`, `search_knowledge_map`, `check_freshness`, `inspect_local`,
+> `execute_or_test`, or `ignore`. Create Knowledge Needs only for the two
+> knowledge routes, then call `session_analysis_submit`.
+
+This path does not give KnowledgeMap the full transcript. For local Ollama
+analysis of a stored Codex session, first call `session_list`, then explicitly
+authorize `session_analysis_prepare` with `confirm_read=true`.

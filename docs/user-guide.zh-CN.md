@@ -36,7 +36,8 @@ AI 搜索 Claim，并追踪到原始证据
 ### 可以直接使用
 
 - 发现 Claude Code 和 Codex 的本地 Session 元数据；
-- 经用户明确授权后读取指定 Session，并推荐需要补充的知识；
+- 由 Codex/Claude Code 在客户端过滤 Session，并提交结构化知识需求；
+- 经用户明确授权后使用本地 Ollama 增量分析指定 Session；
 - 导入 UTF-8 Markdown、纯文本和公开技术网页；
 - 先保存原始证据，再让 AI 提取候选 Claim；
 - 人工执行接受、拒绝、降级为争议或继续研究；
@@ -61,7 +62,7 @@ AI 搜索 Claim，并追踪到原始证据
 - macOS、Linux，或可运行 Python 和 stdio MCP 的环境；
 - Python 3.12 或更高版本；
 - [uv](https://docs.astral.sh/uv/)；
-- 一个兼容 OpenAI Chat Completions 的分析服务。
+- 本地 Ollama；Codex/Claude Code 客户端辅助模式不要求额外模型服务。
 
 默认配置使用本地 Ollama：
 
@@ -120,14 +121,13 @@ export KNOWLEDGEMAP_LOCAL_SOURCE_ROOT="/absolute/path/to/approved-documents"
 可选配置：
 
 ```bash
-export KNOWLEDGEMAP_ANALYZER_API_KEY="..."
 export KNOWLEDGEMAP_GITHUB_TOKEN="..."
 export KNOWLEDGEMAP_UPDATE_INTERVAL_DAYS="7"
 ```
 
 `KNOWLEDGEMAP_LOCAL_SOURCE_ROOT` 是本地文件导入的安全边界。位于该目录之外的文件，以及通过符号链接逃逸到目录外的文件，会被拒绝。
 
-如果分析器地址指向远程服务，获得授权的 Session 正文和待分析的资料文本会发送到该服务。使用本地 Ollama 时，分析过程保留在本机。
+分析器地址只允许 `localhost`、`127.0.0.1` 或 `::1`，不支持外部模型 API。
 
 ## 6. 接入 Codex
 
@@ -185,7 +185,7 @@ claude mcp add --transport stdio KnowledgeMap -- \
 
 ## 8. MCP 工具
 
-KnowledgeMap 暴露以下 10 个工具：
+除原有工具外，Session Intelligence 新增以下工具：
 
 | 工具 | 用途 |
 |---|---|
@@ -199,6 +199,11 @@ KnowledgeMap 暴露以下 10 个工具：
 | `knowledge_search` | 默认搜索 accepted Claim |
 | `knowledge_trace` | 校验证据并返回原始摘录和来源位置 |
 | `knowledge_status` | 查看来源、Claim、索引和错误统计 |
+| `session_analysis_prepare` | 授权后使用本地 Ollama 做增量分析 |
+| `session_analysis_submit` | 接收 Codex/Claude Code 自身生成的结构化分析 |
+| `session_analysis_get` | 读取最新任务状态和 checkpoint |
+| `knowledge_need_list` | 列出 open、needs_refresh 或 resolved 知识需求 |
+| `knowledge_need_resolve` | 用 accepted Claim 解析知识需求并返回证据关联 |
 
 ## 9. 推荐使用流程
 
@@ -208,7 +213,19 @@ KnowledgeMap 暴露以下 10 个工具：
 
 > 调用 KnowledgeMap 的 `knowledge_status`，告诉我当前有多少来源、已接受 Claim 和待审核项目。
 
-### 9.2 分析 Session
+### 9.2 分析当前 Session（推荐）
+
+对 Codex 或 Claude Code 说：
+
+> 使用你当前已有的 Session 上下文，过滤寒暄、重复确认和原始工具长输出；整理任务状态，将每个未决项路由为询问用户、检索知识、检查时效、检查本地、执行测试或忽略。只有检索知识和检查时效可以产生 Knowledge Need。调用 `session_analysis_submit`，不要提交完整 Session。
+
+随后查看需求：
+
+> 调用 `knowledge_need_list` 列出当前 Session 的 open 知识需求，并说明每项会影响什么决策。
+
+这种方式使用 Codex/Claude Code 自身模型能力，KnowledgeMap 只保存结构化状态和最多 500 字符的必要证据片段。
+
+### 9.3 使用本地 Ollama 分析历史 Session
 
 先列出元数据：
 
@@ -216,11 +233,13 @@ KnowledgeMap 暴露以下 10 个工具：
 
 选定 Session 后再明确授权：
 
-> 分析 Session `<session-id>`，我确认允许读取正文，`confirm_read=true`。只生成知识需求推荐，不要创建 accepted Claim。
+> 使用 `session_analysis_prepare` 分析 Session `<session-id>`，我确认允许读取正文，`confirm_read=true`。只生成知识需求，不要创建 accepted Claim。
 
 授权与 Session 内容快照绑定。如果 Session 后续发生变化，需要重新授权。调用 `session_revoke` 后，旧授权立即失效。
 
-### 9.3 导入资料
+旧 `session_analyze` 暂时保留，但已标记 deprecated。
+
+### 9.4 导入资料
 
 本地 Markdown 示例：
 
@@ -234,7 +253,7 @@ KnowledgeMap 暴露以下 10 个工具：
 
 导入完成后，AI 提取的 Claim 状态是 `pending`，不会立即进入默认搜索。
 
-### 9.4 人工审核
+### 9.5 人工审核
 
 查看候选内容：
 
@@ -253,7 +272,7 @@ KnowledgeMap 暴露以下 10 个工具：
 
 > 对 Claim `<claim-id>` 执行 `accept`，actor 为我的名字，client 为 `codex`。
 
-### 9.5 检索和引用证据
+### 9.6 检索和引用证据
 
 > 在 KnowledgeMap 中搜索“OAuth PKCE”，返回最多 5 条 accepted Claim。对准备使用的每条 Claim 调用 `knowledge_trace`，再根据证据回答。
 
@@ -351,7 +370,7 @@ ollama list
 curl http://127.0.0.1:11434/api/tags
 ```
 
-检查 `KNOWLEDGEMAP_ANALYZER_BASE_URL` 和模型名称。远程服务还可能需要 `KNOWLEDGEMAP_ANALYZER_API_KEY`。
+检查 `KNOWLEDGEMAP_ANALYZER_BASE_URL` 和模型名称。远程地址会被主动拒绝。
 
 ### 本地文件被拒绝
 
