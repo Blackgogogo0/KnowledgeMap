@@ -1,0 +1,9 @@
+[
+  {"text": "把按钮改成蓝色并运行测试", "route": "execute_or_test", "creates_need": false},
+  {"text": "做得更专业", "route": "ask_user", "creates_need": false},
+  {"text": "项目当前 Python 版本是多少？", "route": "inspect_local", "creates_need": false},
+  {"text": "安装依赖时报权限错误", "route": "execute_or_test", "creates_need": false},
+  {"text": "模型猜测 SDK 当前支持该接口", "route": "search_knowledge_map", "creates_need": true},
+  {"text": "引用了旧 commit 的接口说明", "route": "check_freshness", "creates_need": true},
+  {"text": "ok", "route": "ignore", "creates_need": false}
+]
