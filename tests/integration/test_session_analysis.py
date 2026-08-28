@@ -64,6 +64,8 @@ async def test_session_analysis_only_creates_recommendations(tmp_path):
     assert result.goal == "Select versioned technical guidance"
     assert len(result.recommendations) == 1
     assert result.recommendations[0].status == "pending"
+    assert result.deprecated is True
+    assert result.replacement == "session_analysis_prepare"
     assert ClaimRepository(db).count() == 0
     with db.connect() as connection:
         assert connection.execute(

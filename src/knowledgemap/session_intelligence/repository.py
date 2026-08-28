@@ -1,8 +1,9 @@
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
+
+from pydantic import BaseModel
 
 from knowledgemap.db import Database
 from knowledgemap.errors import KnowledgeMapError
@@ -14,8 +15,7 @@ from knowledgemap.session_intelligence.models import (
 from knowledgemap.session_intelligence.needs import canonicalize_question, rank_need
 
 
-@dataclass(frozen=True)
-class AnalysisRecord:
+class AnalysisRecord(BaseModel, frozen=True):
     checkpoint_id: str
     client: str
     session_id: str
@@ -50,11 +50,11 @@ class SessionIntelligenceRepository:
                     and existing["content_hash"] == submission.content_hash
                 ):
                     return AnalysisRecord(
-                        submission.checkpoint_id,
-                        submission.client,
-                        submission.session_id,
-                        datetime.fromisoformat(existing["created_at"]),
-                        True,
+                        checkpoint_id=submission.checkpoint_id,
+                        client=submission.client,
+                        session_id=submission.session_id,
+                        created_at=datetime.fromisoformat(existing["created_at"]),
+                        idempotent_replay=True,
                     )
                 raise KnowledgeMapError(
                     "CHECKPOINT_CONFLICT", "Checkpoint ID already represents other content."
@@ -84,14 +84,15 @@ class SessionIntelligenceRepository:
                 """
                 INSERT INTO session_checkpoints (
                     checkpoint_id, client, session_id, previous_checkpoint_id,
-                    content_hash, provider_mode, is_active, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+                    last_message_id, content_hash, provider_mode, is_active, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
                 """,
                 (
                     submission.checkpoint_id,
                     submission.client,
                     submission.session_id,
                     submission.previous_checkpoint_id,
+                    submission.last_message_id,
                     submission.content_hash,
                     provider_mode,
                     created_at.isoformat(),
@@ -101,8 +102,8 @@ class SessionIntelligenceRepository:
                 "INSERT INTO task_episodes VALUES (?, ?, ?, ?)",
                 [
                     (
-                        snapshot.episode_id,
                         submission.checkpoint_id,
+                        snapshot.episode_id,
                         snapshot.model_dump_json(),
                         created_at.isoformat(),
                     )
@@ -176,10 +177,10 @@ class SessionIntelligenceRepository:
                     ],
                 )
         return AnalysisRecord(
-            submission.checkpoint_id,
-            submission.client,
-            submission.session_id,
-            created_at,
+            checkpoint_id=submission.checkpoint_id,
+            client=submission.client,
+            session_id=submission.session_id,
+            created_at=created_at,
         )
 
     def get_latest_state(
@@ -201,10 +202,10 @@ class SessionIntelligenceRepository:
             ).fetchall()
         return (
             AnalysisRecord(
-                checkpoint["checkpoint_id"],
-                client,
-                session_id,
-                datetime.fromisoformat(checkpoint["created_at"]),
+                checkpoint_id=checkpoint["checkpoint_id"],
+                client=client,
+                session_id=session_id,
+                created_at=datetime.fromisoformat(checkpoint["created_at"]),
             ),
             [TaskStateSnapshot.model_validate_json(row["state_json"]) for row in states],
         )
@@ -254,4 +255,3 @@ class SessionIntelligenceRepository:
                 "INSERT INTO knowledge_need_feedback VALUES (?, ?, ?, ?)",
                 (str(uuid4()), need_id, feedback, self.clock().isoformat()),
             )
-

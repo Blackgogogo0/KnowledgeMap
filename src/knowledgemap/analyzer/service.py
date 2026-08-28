@@ -25,6 +25,8 @@ class SessionAnalysisResult(BaseModel):
     existing_knowledge: list[str]
     recommendations: list[RecommendationRecord]
     created_at: datetime
+    deprecated: bool = True
+    replacement: str = "session_analysis_prepare"
 
 
 class AnalysisService:

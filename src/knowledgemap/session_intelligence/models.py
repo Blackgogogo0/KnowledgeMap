@@ -99,6 +99,7 @@ class SessionInsightSubmission(BaseModel):
     session_id: str = Field(min_length=1)
     checkpoint_id: str = Field(min_length=1)
     previous_checkpoint_id: str | None = None
+    last_message_id: str | None = None
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     episode_deltas: list[TaskStateDelta] = Field(default_factory=list)
     routes: list[GapRouteDecision] = Field(default_factory=list)
@@ -118,4 +119,3 @@ class AnalysisEvent(BaseModel):
     message_id: str
     role: Literal["user", "assistant"]
     text: str
-

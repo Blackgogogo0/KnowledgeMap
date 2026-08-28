@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS session_checkpoints (
     client TEXT NOT NULL CHECK (client IN ('claude-code', 'codex')),
     session_id TEXT NOT NULL,
     previous_checkpoint_id TEXT REFERENCES session_checkpoints(checkpoint_id),
+    last_message_id TEXT,
     content_hash TEXT NOT NULL,
     provider_mode TEXT NOT NULL,
     is_active INTEGER NOT NULL DEFAULT 1,
@@ -11,10 +12,11 @@ CREATE TABLE IF NOT EXISTS session_checkpoints (
 );
 
 CREATE TABLE IF NOT EXISTS task_episodes (
-    episode_id TEXT PRIMARY KEY,
     checkpoint_id TEXT NOT NULL REFERENCES session_checkpoints(checkpoint_id),
+    episode_id TEXT NOT NULL,
     state_json TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (checkpoint_id, episode_id)
 );
 
 CREATE TABLE IF NOT EXISTS task_state_events (
