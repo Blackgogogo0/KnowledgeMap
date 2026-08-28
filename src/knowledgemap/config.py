@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     analyzer_base_url: str = "http://127.0.0.1:11434/v1"
     analyzer_model: str = "qwen3.5:0.8b"
     analyzer_api_key: str | None = None
+    github_token: str | None = None
+    local_source_root: Path = Field(default_factory=Path.cwd)
     update_interval_days: int = Field(default=7, ge=1)
 
     @property
