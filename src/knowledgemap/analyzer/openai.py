@@ -38,11 +38,12 @@ class OpenAICompatibleAnalyzer:
         normalized = base_url.rstrip("/")
         if normalized.endswith("/v1"):
             normalized = normalized[:-3]
-        self.endpoint = f"{normalized}/v1/chat/completions"
+        self.endpoint = f"{normalized}/api/chat"
         self.model = model
         self.api_key = api_key or "local"
         self.timeout = httpx.Timeout(timeout, connect=min(timeout, 10.0))
         self.max_attempts = max(1, max_attempts)
+        self.trust_env = False
 
     async def extract_state(
         self, events: list[AnalysisEvent], previous_state: TaskStateSnapshot | None
@@ -103,15 +104,24 @@ class OpenAICompatibleAnalyzer:
         return result.claims
 
     async def _request(self, prompt: str, output_type: type[OutputModel]) -> OutputModel:
+        constrained_prompt = (
+            prompt
+            + "\nReturn JSON only. It must validate against this JSON Schema:\n"
+            + json.dumps(output_type.model_json_schema(), separators=(",", ":"))
+        )
         payload = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0,
+            "messages": [{"role": "user", "content": constrained_prompt}],
+            "format": "json",
+            "think": False,
+            "stream": False,
+            "options": {"temperature": 0, "num_predict": 1024},
         }
         headers = {"Authorization": f"Bearer {self.api_key}"}
         last_error: Exception | None = None
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(
+            timeout=self.timeout, trust_env=self.trust_env
+        ) as client:
             for attempt in range(self.max_attempts):
                 try:
                     response = await client.post(
@@ -140,7 +150,7 @@ class OpenAICompatibleAnalyzer:
     ) -> OutputModel:
         try:
             envelope = response.json()
-            content = envelope["choices"][0]["message"]["content"]
+            content = envelope["message"]["content"]
             if isinstance(content, dict):
                 data = content
             else:

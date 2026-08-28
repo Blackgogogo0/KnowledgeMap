@@ -16,13 +16,15 @@ def analyzer():
     )
 
 
+def test_local_analyzer_never_uses_environment_proxy(analyzer):
+    assert analyzer.trust_env is False
+
+
 @pytest.mark.asyncio
 async def test_analyzer_validates_structured_session_output(respx_mock, analyzer):
-    route = respx_mock.post("http://llm.test/v1/chat/completions").respond(
+    route = respx_mock.post("http://llm.test/api/chat").respond(
         json={
-            "choices": [
-                {
-                    "message": {
+            "message": {
                         "content": """{
                             "goal": "Choose an OAuth design",
                             "existing_knowledge": ["OAuth uses tokens"],
@@ -33,8 +35,6 @@ async def test_analyzer_validates_structured_session_output(respx_mock, analyzer
                             }]
                         }"""
                     }
-                }
-            ]
         }
     )
 
@@ -47,13 +47,17 @@ async def test_analyzer_validates_structured_session_output(respx_mock, analyzer
     assert result.recommendations[0].knowledge_question.startswith("Which OAuth")
     request = route.calls[0].request
     assert request.headers["authorization"] == "Bearer local"
-    assert request.url.path == "/v1/chat/completions"
+    assert request.url.path == "/api/chat"
+    payload = __import__("json").loads(request.content)
+    assert payload["format"] == "json"
+    assert payload["think"] is False
+    assert "SessionAnalysisDraft" in payload["messages"][0]["content"]
 
 
 @pytest.mark.asyncio
 async def test_analyzer_rejects_invalid_json(respx_mock, analyzer):
-    respx_mock.post("http://llm.test/v1/chat/completions").respond(
-        json={"choices": [{"message": {"content": "not-json"}}]}
+    respx_mock.post("http://llm.test/api/chat").respond(
+        json={"message": {"content": "not-json"}}
     )
 
     with pytest.raises(KnowledgeMapError, match="ANALYZER_INVALID_OUTPUT"):
@@ -64,7 +68,7 @@ async def test_analyzer_rejects_invalid_json(respx_mock, analyzer):
 
 @pytest.mark.asyncio
 async def test_analyzer_retries_timeout_only_within_bound(respx_mock, analyzer):
-    route = respx_mock.post("http://llm.test/v1/chat/completions").mock(
+    route = respx_mock.post("http://llm.test/api/chat").mock(
         side_effect=httpx.ReadTimeout("slow analyzer")
     )
 
@@ -78,14 +82,14 @@ async def test_analyzer_retries_timeout_only_within_bound(respx_mock, analyzer):
 
 @pytest.mark.asyncio
 async def test_staged_analyzer_extracts_state(respx_mock, analyzer):
-    route = respx_mock.post("http://llm.test/v1/chat/completions").respond(
-        json={"choices": [{"message": {"content": """{
+    route = respx_mock.post("http://llm.test/api/chat").respond(
+        json={"message": {"content": """{
             "deltas": [{
                 "episode_id": "e1", "field": "objective", "operation": "add",
                 "value": "Choose an SDK", "evidence": [{"message_id": "m1", "excerpt": "Choose SDK"}]
             }],
             "unresolved_item_ids": ["u1"]
-        }"""}}]}
+        }"""}}
     )
     result = await analyzer.extract_state(
         [AnalysisEvent(message_id="m1", role="user", text="Choose SDK")], None
@@ -96,12 +100,12 @@ async def test_staged_analyzer_extracts_state(respx_mock, analyzer):
 
 @pytest.mark.asyncio
 async def test_staged_analyzer_routes_gaps(respx_mock, analyzer):
-    respx_mock.post("http://llm.test/v1/chat/completions").respond(
-        json={"choices": [{"message": {"content": """{
+    respx_mock.post("http://llm.test/api/chat").respond(
+        json={"message": {"content": """{
             "routes": [{"unresolved_item_id": "u1", "route": "ask_user",
             "rationale": "Acceptance criteria missing",
             "evidence": [{"message_id": "m1", "excerpt": "make it better"}]}]
-        }"""}}]}
+        }"""}}
     )
     result = await analyzer.route_gaps(TaskStateSnapshot(episode_id="e1", unresolved_items=["u1"]))
     assert result.routes[0].route == "ask_user"
@@ -109,8 +113,8 @@ async def test_staged_analyzer_routes_gaps(respx_mock, analyzer):
 
 @pytest.mark.asyncio
 async def test_staged_analyzer_composes_needs(respx_mock, analyzer):
-    respx_mock.post("http://llm.test/v1/chat/completions").respond(
-        json={"choices": [{"message": {"content": """{
+    respx_mock.post("http://llm.test/api/chat").respond(
+        json={"message": {"content": """{
             "knowledge_needs": [{
                 "need_id": "n1", "unresolved_item_id": "u1",
                 "question": "Does SDK v2 support structured output?",
@@ -120,8 +124,7 @@ async def test_staged_analyzer_composes_needs(respx_mock, analyzer):
                 "evidence": [{"message_id": "m1", "excerpt": "SDK might support it"}],
                 "confidence": 0.8
             }]
-        }"""}}]}
+        }"""}}
     )
     result = await analyzer.compose_needs(TaskStateSnapshot(episode_id="e1"), [])
     assert result.knowledge_needs[0].need_id == "n1"
-
