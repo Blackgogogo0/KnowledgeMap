@@ -92,3 +92,7 @@ verification fails. Pending claims are not searchable by default.
 uv run pytest -v
 uv run python -m compileall src
 ```
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
